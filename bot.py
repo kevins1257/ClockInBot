@@ -10,14 +10,12 @@ import os
 from dotenv import load_dotenv
 
 # ─────────────────────────────────────────────────────────────
-# CONFIG — only edit this section
+# CONFIG — ONLY TOUCH THIS IF YOU KNOW WHAT YOU'RE DOING
 # ─────────────────────────────────────────────────────────────
+load_dotenv()
 TOKEN   = os.getenv("DISCORD_TOKEN")
 DB_PATH = 'clockin.db'
 
-# ─────────────────────────────────────────────────────────────
-# PERSISTENT DB CONNECTION  (auto-reconnects on disk I/O error)
-# ─────────────────────────────────────────────────────────────
 _db_conn = None
 
 async def _open_db() -> aiosqlite.Connection:
@@ -53,8 +51,7 @@ class _Db:
         return self._conn
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # If a disk I/O error bubbled up, reset the connection so the
-        # next request gets a fresh one instead of a permanently broken one.
+    
         if exc_type is not None:
             import sqlite3
             if issubclass(exc_type, (aiosqlite.OperationalError, sqlite3.OperationalError)):
@@ -63,9 +60,6 @@ class _Db:
         return False  # never suppress the exception — let commands handle it normally
 
 
-# ─────────────────────────────────────────────────────────────
-# COLORS
-# ─────────────────────────────────────────────────────────────
 COLOR_SUCCESS = 0x57F287
 COLOR_ERROR   = 0xED4245
 COLOR_INFO    = 0x5865F2
@@ -73,9 +67,7 @@ COLOR_WARN    = 0xFEE75C
 COLOR_STATS   = 0xEB459E
 COLOR_ADMIN   = 0xFFA500
 
-# ─────────────────────────────────────────────────────────────
-# BOT SETUP
-# ─────────────────────────────────────────────────────────────
+
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -84,9 +76,6 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 bot_start_time = datetime.now(timezone.utc)
 
 
-# ─────────────────────────────────────────────────────────────
-# DATABASE
-# ─────────────────────────────────────────────────────────────
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('''CREATE TABLE IF NOT EXISTS sessions (
@@ -260,9 +249,6 @@ async def log_action(guild: discord.Guild, embed: discord.Embed):
             pass
 
 
-# ─────────────────────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────────────────────
 def format_duration(minutes: int) -> str:
     minutes = abs(int(minutes))
     hours, mins = divmod(minutes, 60)
@@ -312,10 +298,6 @@ def ts(dt: datetime) -> str:
 def ts_full(dt: datetime) -> str:
     return f"<t:{int(dt.timestamp())}:F>"
 
-
-# ─────────────────────────────────────────────────────────────
-# EVENTS
-# ─────────────────────────────────────────────────────────────
 @bot.event
 async def on_ready():
     await bot.change_presence(
@@ -329,10 +311,6 @@ async def on_guild_join(guild: discord.Guild):
     await ensure_settings(guild.id)
     await ensure_masks(guild.id)
 
-
-# ─────────────────────────────────────────────────────────────
-# CLOCK IN
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='clockin', description='Clock in for a mask')
 @app_commands.describe(mask='The mask to clock in for (uses default if not specified)')
 async def clockin(interaction: discord.Interaction, mask: str = None):
@@ -406,10 +384,6 @@ async def clockin(interaction: discord.Interaction, mask: str = None):
     embed.set_thumbnail(url=interaction.user.display_avatar.url)
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# CLOCK OUT
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='clockout', description='Clock out for a mask')
 @app_commands.describe(mask='The mask to clock out of', note='Optional note for this session')
 async def clockout(interaction: discord.Interaction, mask: str = None, note: str = None):
@@ -479,10 +453,6 @@ async def clockout(interaction: discord.Interaction, mask: str = None, note: str
     embed.set_thumbnail(url=interaction.user.display_avatar.url)
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# STATUS
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='status', description='Check clock in/out status and total times')
 @app_commands.describe(user='User to check (leave blank for yourself)')
 async def status(interaction: discord.Interaction, user: discord.Member = None):
@@ -532,10 +502,6 @@ async def status(interaction: discord.Interaction, user: discord.Member = None):
     embed.add_field(name="📋 Sessions",       value=str(session_count),         inline=True)
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# HISTORY
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='history', description='View your recent clock sessions')
 @app_commands.describe(user='User to check', limit='Number of sessions to show (max 10)')
 async def history(interaction: discord.Interaction,
@@ -576,10 +542,6 @@ async def history(interaction: discord.Interaction,
         embed.add_field(name=f"🎭 `{mask}`", value=val, inline=False)
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# REPORT
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='report', description='Time report for a user')
 @app_commands.describe(user='User to report on', days='Days to look back (default 7)')
 async def report(interaction: discord.Interaction,
@@ -620,10 +582,6 @@ async def report(interaction: discord.Interaction,
         embed.add_field(name="📋 Sessions", value=str(sum(r[2] for r in rows)),  inline=True)
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# LEADERBOARD
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='leaderboard', description='Top users by total clocked time')
 @app_commands.describe(mask='Filter by mask', days='Days to look back (0 = all time)')
 async def leaderboard(interaction: discord.Interaction,
@@ -668,10 +626,6 @@ async def leaderboard(interaction: discord.Interaction,
         embed.description = '\n'.join(lines)
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# WHO'S CLOCKED IN
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='whoclocked', description='See everyone currently clocked in')
 @app_commands.describe(mask='Filter by mask')
 async def whoclocked(interaction: discord.Interaction, mask: str = None):
@@ -707,10 +661,6 @@ async def whoclocked(interaction: discord.Interaction, mask: str = None):
         embed.set_footer(text=f"{len(active)} user{'s' if len(active) != 1 else ''} clocked in")
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# EXPORT (personal CSV) — grouped totals per mask
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='export', description='Export your clocked time summary per mask to CSV')
 async def export(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -718,7 +668,7 @@ async def export(interaction: discord.Interaction):
     user_id    = interaction.user.id
     username   = interaction.user.display_name
 
-    # Pull total minutes per mask from completed sessions
+    
     async with _Db() as db:
         async with db.execute(
             "SELECT mask, SUM(duration) FROM sessions "
@@ -726,7 +676,7 @@ async def export(interaction: discord.Interaction):
             (user_id, guild_id)) as cur:
             mask_totals = await cur.fetchall()
 
-        # Also grab any currently active sessions so live time is included
+      
         async with db.execute(
             "SELECT mask, start_time FROM active WHERE user_id=? AND server_id=?",
             (user_id, guild_id)) as cur:
@@ -738,7 +688,7 @@ async def export(interaction: discord.Interaction):
             ephemeral=True)
         return
 
-    # Build a dict: mask -> total seconds (including live if clocked in)
+   
     totals_by_mask: dict[str, int] = {}
     for mask, minutes in mask_totals:
         totals_by_mask[mask] = (minutes or 0) * 60
@@ -747,11 +697,11 @@ async def export(interaction: discord.Interaction):
         live_secs = int((datetime.now() - datetime.fromisoformat(start_str)).total_seconds())
         totals_by_mask[mask] = totals_by_mask.get(mask, 0) + live_secs
 
-    # Build CSV
+
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # ── Header ───────────────────────────────────────────────
+
     writer.writerow([
         'Username',
         'Mask',
@@ -774,7 +724,7 @@ async def export(interaction: discord.Interaction):
         hours, remainder = divmod(remainder, 3600)
         minutes, seconds = divmod(remainder, 60)
 
-        # Human-readable summary string, e.g. "2d 4h 30m 15s"
+       
         parts = []
         if days:    parts.append(f"{days}d")
         if hours:   parts.append(f"{hours}h")
@@ -795,8 +745,8 @@ async def export(interaction: discord.Interaction):
             is_active
         ])
 
-    # ── Grand total row ───────────────────────────────────────
-    writer.writerow([])  # blank separator
+   
+    writer.writerow([])  
     g_days, g_rem  = divmod(grand_total_secs, 86400)
     g_hours, g_rem = divmod(g_rem, 3600)
     g_mins, g_secs = divmod(g_rem, 60)
@@ -808,7 +758,7 @@ async def export(interaction: discord.Interaction):
 
     writer.writerow([
         username,
-        'GRAND TOTAL',
+        'TOTAL',
         ' '.join(g_parts) if g_parts else '0s',
         g_days, g_hours, g_mins, g_secs,
         ''
@@ -829,10 +779,6 @@ async def export(interaction: discord.Interaction):
     embed.set_footer(text="Includes any currently active sessions · Times shown as D/H/M/S")
     await interaction.followup.send(embed=embed, file=file, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# ALL DATA (admin CSV) — grouped totals per user per mask
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='alldata', description='Admin: Export all server time totals to CSV')
 @app_commands.describe(place='"channel" or "dm"')
 async def alldata(interaction: discord.Interaction, place: str = 'dm'):
@@ -845,7 +791,7 @@ async def alldata(interaction: discord.Interaction, place: str = 'dm'):
         return
     guild_id = interaction.guild.id
 
-    # Totals per user per mask from completed sessions
+
     async with _Db() as db:
         async with db.execute(
             "SELECT user_id, mask, SUM(duration) FROM sessions "
@@ -865,7 +811,6 @@ async def alldata(interaction: discord.Interaction, place: str = 'dm'):
             ephemeral=True)
         return
 
-    # Build structure: {user_id: {mask: total_seconds}}
     data: dict[int, dict[str, int]] = {}
     for uid, mask, minutes in session_rows:
         data.setdefault(uid, {})[mask] = (minutes or 0) * 60
@@ -877,7 +822,6 @@ async def alldata(interaction: discord.Interaction, place: str = 'dm'):
         data[uid][mask] = data[uid].get(mask, 0) + live_secs
         active_set.setdefault(uid, set()).add(mask)
 
-    # Sort users by grand total descending
     sorted_users = sorted(
         data.items(),
         key=lambda x: sum(x[1].values()),
@@ -886,7 +830,6 @@ async def alldata(interaction: discord.Interaction, place: str = 'dm'):
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # ── Header ───────────────────────────────────────────────
     writer.writerow([
         'Username',
         'User ID',
@@ -936,7 +879,7 @@ async def alldata(interaction: discord.Interaction, place: str = 'dm'):
                 is_active
             ])
 
-        # Per-user subtotal row
+       
         g_days, g_rem  = divmod(user_grand_secs, 86400)
         g_hours, g_rem = divmod(g_rem, 3600)
         g_mins, g_secs = divmod(g_rem, 60)
@@ -954,7 +897,7 @@ async def alldata(interaction: discord.Interaction, place: str = 'dm'):
             g_days, g_hours, g_mins, g_secs,
             ''
         ])
-        writer.writerow([])  # blank line between users
+        writer.writerow([])  
 
     output.seek(0)
     filename = f"{interaction.guild.name}_clockin_alldata.csv".replace(' ', '_')
@@ -979,10 +922,6 @@ async def alldata(interaction: discord.Interaction, place: str = 'dm'):
     else:
         await interaction.followup.send(embed=embed, file=file)
 
-
-# ─────────────────────────────────────────────────────────────
-# ADD / REMOVE TIME (admin)
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='add', description='Admin: Manually add or remove time from a user')
 @app_commands.describe(
     user='Target user', mask='Mask name',
@@ -1030,10 +969,6 @@ async def add_time(interaction: discord.Interaction,
     embed.add_field(name="Note",   value=note,                      inline=False)
     await interaction.followup.send(embed=embed)
 
-
-# ─────────────────────────────────────────────────────────────
-# FORCE OUT (admin)
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='forceout', description='Admin: Force a user to clock out')
 @app_commands.describe(user='Target user', mask='Mask to force out of')
 async def force_out(interaction: discord.Interaction,
@@ -1072,7 +1007,7 @@ async def force_out(interaction: discord.Interaction,
             (user.id, guild_id, mask))
         await db.commit()
 
-    # Remove role
+
     async with _Db() as db:
         async with db.execute(
             "SELECT giverole_enabled, onerole FROM settings WHERE server_id=?",
@@ -1105,10 +1040,6 @@ async def force_out(interaction: discord.Interaction,
     embed.add_field(name="Duration", value=f"**{format_duration(duration)}**", inline=True)
     await interaction.followup.send(embed=embed)
 
-
-# ─────────────────────────────────────────────────────────────
-# CLEAR DATA (admin)
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='cleardata', description='Admin: Clear all time data for a user')
 @app_commands.describe(user='User to clear', mask='Specific mask (blank = all)')
 async def cleardata(interaction: discord.Interaction,
@@ -1152,9 +1083,7 @@ async def cleardata(interaction: discord.Interaction,
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-# ─────────────────────────────────────────────────────────────
-# SUMMARY BUILDER (shared by /summary and /resetall)
-# ─────────────────────────────────────────────────────────────
+
 async def build_summary(guild: discord.Guild, guild_id: int):
     async with _Db() as db:
         async with db.execute(
@@ -1225,10 +1154,6 @@ async def build_summary(guild: discord.Guild, guild_id: int):
         fp=io.BytesIO(output.getvalue().encode()), filename='server_summary.csv')
     return embed, file
 
-
-# ─────────────────────────────────────────────────────────────
-# SUMMARY (admin)
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='summary',
                   description='Admin: Total clocked time per user across all masks')
 @app_commands.describe(place='"channel" or "dm" (default: dm)')
@@ -1262,10 +1187,6 @@ async def summary(interaction: discord.Interaction, place: str = 'dm'):
     else:
         await interaction.followup.send(embed=embed, file=file)
 
-
-# ─────────────────────────────────────────────────────────────
-# RESET ALL (admin)
-# ─────────────────────────────────────────────────────────────
 class ConfirmResetView(discord.ui.View):
     def __init__(self, admin_id: int):
         super().__init__(timeout=30)
@@ -1358,10 +1279,6 @@ async def resetall(interaction: discord.Interaction):
     view = ConfirmResetView(admin_id=interaction.user.id)
     await interaction.followup.send(embed=confirm_embed, view=view, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# MASK COMMANDS
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='masklist', description='List all masks for this server')
 async def masklist(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
@@ -1475,10 +1392,6 @@ async def masktoggle(interaction: discord.Interaction, mask: str):
                        f"`{mask}` is now {status_str}", COLOR_SUCCESS)
     await interaction.followup.send(embed=embed, ephemeral=True)
 
-
-# ─────────────────────────────────────────────────────────────
-# SETTINGS GROUP
-# ─────────────────────────────────────────────────────────────
 settings_group = app_commands.Group(
     name='settings', description='Configure the bot (Admin only)')
 
@@ -1731,10 +1644,6 @@ async def settings_minrole(interaction: discord.Interaction,
 
 bot.tree.add_command(settings_group)
 
-
-# ─────────────────────────────────────────────────────────────
-# BUTTON PANEL UI
-# ─────────────────────────────────────────────────────────────
 class MaskSelect(discord.ui.Select):
     def __init__(self, masks: list[str], action: str):
         self.action = action
@@ -1830,7 +1739,6 @@ class ClockButton(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    # ── Clock In / Out toggle ──────────────────────────────
     @discord.ui.button(label='clock in / out',
                        style=discord.ButtonStyle.primary,
                        custom_id='clockinout_main_btn', row=0)
@@ -1857,7 +1765,7 @@ class ClockButton(discord.ui.View):
         elif len(allowed) == 1:
             mask = allowed[0]
         else:
-            # Multiple masks — show select
+      
             async with _Db() as db:
                 async with db.execute(
                     "SELECT mask FROM active WHERE user_id=? AND server_id=?",
@@ -1879,7 +1787,7 @@ class ClockButton(discord.ui.View):
                     view=view, ephemeral=True)
             return
 
-        # Single-mask toggle
+       
         async with _Db() as db:
             async with db.execute(
                 "SELECT start_time FROM active WHERE user_id=? AND server_id=? AND mask=?",
@@ -1887,7 +1795,7 @@ class ClockButton(discord.ui.View):
                 existing = await cur.fetchone()
 
         if existing:
-            # Clock out
+          
             start_time = datetime.fromisoformat(existing[0])
             end_time   = datetime.now()
             duration   = int((end_time - start_time).total_seconds() / 60)
@@ -1915,7 +1823,7 @@ class ClockButton(discord.ui.View):
             embed.add_field(name="Duration", value=f"**{format_duration(duration)}**", inline=True)
             await interaction.followup.send(embed=embed, ephemeral=True)
         else:
-            # Clock in
+            
             if not await check_min_role(interaction):
                 await interaction.followup.send(
                     embed=make_embed("❌ Access Denied",
@@ -1938,7 +1846,7 @@ class ClockButton(discord.ui.View):
                                  COLOR_SUCCESS),
                 ephemeral=True)
 
-    # ── ? — Are you clocked in? ────────────────────────────
+   
     @discord.ui.button(label='?', style=discord.ButtonStyle.secondary,
                        custom_id='status_check_btn', row=0)
     async def status_check_btn(self, interaction: discord.Interaction,
@@ -1967,7 +1875,7 @@ class ClockButton(discord.ui.View):
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
         await interaction.followup.send(embed=embed, ephemeral=True)
 
-    # ── 🕐 — Total time ────────────────────────────────────
+   
     @discord.ui.button(emoji='🕐', style=discord.ButtonStyle.secondary,
                        custom_id='time_check_btn', row=0)
     async def time_check_btn(self, interaction: discord.Interaction,
@@ -2032,9 +1940,6 @@ class ClockButton(discord.ui.View):
         await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-# ─────────────────────────────────────────────────────────────
-# /button — spawn the panel
-# ─────────────────────────────────────────────────────────────
 @bot.tree.command(name='button',
                   description='Admin: Spawn the clock in/out button panel')
 async def button_command(interaction: discord.Interaction):
@@ -2065,9 +1970,7 @@ async def button_command(interaction: discord.Interaction):
         ephemeral=True)
 
 
-# ─────────────────────────────────────────────────────────────
-# MISC COMMANDS
-# ─────────────────────────────────────────────────────────────
+
 @bot.tree.command(name='about', description='About this bot')
 async def about(interaction: discord.Interaction):
     embed = discord.Embed(
@@ -2142,12 +2045,10 @@ async def statistics(interaction: discord.Interaction):
     await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-# ─────────────────────────────────────────────────────────────
-# SETUP & RUN
-# ─────────────────────────────────────────────────────────────
+
 async def setup_hook():
     await init_db()
-    await get_db()   # pre-warm persistent connection so first interaction is instant
+    await get_db()   
     bot.add_view(ClockButton())
     await bot.tree.sync()
 
