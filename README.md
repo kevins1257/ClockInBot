@@ -1,8 +1,6 @@
-# ClockInBot
-================================================================================
   ⏱  ClockIn Bot — README
   Written by Kevin S
-================================================================================
+
 
 A powerful, premium-quality time-tracking bot for Discord servers.
 
@@ -181,6 +179,5 @@ FILES IN THIS PROJECT
   REQUIREMENTS.txt   Full dependency and setup reference
 
 
-================================================================================
-  ClockIn Bot  |  README  |  Written by Kevin S
-================================================================================
+
+  ClockIn Bot  |  README  |  Written by Kevin Shah
